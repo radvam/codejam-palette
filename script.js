@@ -219,3 +219,122 @@ transform.onclick = () => {
     sessionStorage.setItem('paint_focused', 'false');
     sessionStorage.setItem('choose_focused', 'false');
 };
+
+canvas.onmousedown = (e) => {
+  if(sessionStorage.getItem('pencil_focused') === 'true'){
+      canvas.getContext('2d').fillStyle = current.value;
+      canvas.getContext('2d').fillRect(128 * Math.floor(e.offsetX / 128), 128 * Math.floor(e.offsetY / 128), 128, 128);
+
+      canvas.onmousemove = (e) => {
+          canvas.getContext('2d').fillRect(128 * Math.floor(e.offsetX / 128), 128 * Math.floor(e.offsetY / 128), 128, 128);
+      }
+
+      document.onmouseup = () => {
+          canvas.onmousemove = null;
+      }
+  }
+  if (sessionStorage.getItem('paint_focused') === 'true') {
+      
+      let x = event.layerX;
+      let y = event.layerY;
+      let pixel = ctx.getImageData(x, y, 1, 1);
+      let data = pixel.data;
+      let rgbaCanvas = data.slice(0, -1).join(', ');
+
+      text.style.color = current.value;
+      let rgb =  text.style.color;
+      let arr = rgb.slice(4, -1).split(', ');
+      
+      let colorFill = {};
+      colorFill.r = +arr[0];
+      colorFill.g = +arr[1];
+      colorFill.b = +arr[2];
+      colorFill.a = +arr[3] || 255;
+
+      let rgbaCurrent = arr.join(', ');
+
+      if (rgbaCanvas !== rgbaCurrent) {
+          floodFill(e.offsetX, e.offsetY, colorFill);
+      }
+  }
+}
+
+function getPixelPos(x, y) {
+  return (y * canvas.width + x) * 4;
+};
+
+function matchStartColor (data, pos, startColor) {
+  return (data[pos]  === startColor.r &&
+    data[pos+1] === startColor.g &&
+      data[pos+2] === startColor.b &&
+      data[pos+3] === startColor.a);
+};
+
+function colorPixel (data, pos, color) {
+data[pos] = color.r || 0;
+  data[pos+1] = color.g || 0;
+  data[pos+2] = color.b || 0;
+  data[pos+3] = color.hasOwnProperty("a") ? color.a : 255;
+};
+
+function floodFill (startX, startY, fillColor) {
+  let dstImg = ctx.getImageData(0,0,canvas.width,canvas.height);
+  let dstData = dstImg.data;
+
+  let startPos = getPixelPos(startX, startY);
+  let startColor = {
+      r: dstData[startPos],
+      g: dstData[startPos+1],
+      b: dstData[startPos+2],
+      a: dstData[startPos+3]
+  };
+  let todo = [[startX,startY]];
+
+  while (todo.length) {
+      let pos = todo.pop();
+      let x = pos[0];
+      let y = pos[1];    
+      let currentPos = getPixelPos(x, y);
+
+      while((y-- >= 0) && matchStartColor(dstData, currentPos, startColor)) {
+          currentPos -= canvas.width * 4;
+      }
+
+      currentPos += canvas.width * 4;
+      ++y;
+      let reachLeft = false;
+      let reachRight = false;
+
+      while((y++ < canvas.height-1) && matchStartColor(dstData, currentPos, startColor)) {
+
+          colorPixel(dstData, currentPos, fillColor);
+          
+          if (x > 0) {
+              if (matchStartColor(dstData, currentPos-4, startColor)) {
+                  if (!reachLeft) {
+                  todo.push([x-1, y]);
+                  reachLeft = true;
+                  }
+              }
+              else if (reachLeft) {
+                  reachLeft = false;
+              }
+          }
+          
+          if (x < canvas.width-1) {
+              if (matchStartColor(dstData, currentPos+4, startColor)) {
+                  if (!reachRight) {
+                  todo.push([x+1, y]);
+                  reachRight = true;
+                  }
+              }
+              else if (reachRight) {
+                  reachRight = false;
+              }
+          }
+          currentPos += canvas.width * 4;
+      }
+  }
+
+  ctx.putImageData(dstImg,0,0);
+};
