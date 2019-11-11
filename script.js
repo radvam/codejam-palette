@@ -338,3 +338,38 @@ function floodFill (startX, startY, fillColor) {
 
   ctx.putImageData(dstImg,0,0);
 };
+
+canvas.addEventListener('mousemove', (event) =>  {
+  if (sessionStorage.getItem('choose_focused') === 'true') {
+      let x = event.layerX;
+      let y = event.layerY;
+      let pixel = ctx.getImageData(x, y, 1, 1);
+      let data = pixel.data;
+      let rgba = 'rgba(' + data[0] + ', ' + data[1] +
+              ', ' + data[2] + ', ' + (data[3] / 255) + ')';
+      indicator_choose.style.background =  rgba;
+      
+  }
+});
+
+canvas.addEventListener('click', (event) =>  {
+  if (sessionStorage.getItem('choose_focused') === 'true') {
+      let x = event.layerX;
+      let y = event.layerY;
+      let pixel = ctx.getImageData(x, y, 1, 1);
+      let data = pixel.data;
+      let rgba = 'rgba(' + data[0] + ', ' + data[1] +
+              ', ' + data[2] + ', ' + (data[3] / 255) + ')';
+      
+      sessionStorage.setItem('local_prev', sessionStorage.getItem('local_current'));
+      prev.style.backgroundColor = sessionStorage.getItem('local_prev');
+      current.value = rgb_to_hex(rgba);
+      sessionStorage.setItem('local_current', current.value);
+  }
+});
+
+function rgb_to_hex(color){
+  let rgb = color.replace(/\s/g,'').match(/^rgba?\((\d+),(\d+),(\d+)/i);
+  return (rgb && rgb.length === 4) ? "#" + ("0" + parseInt(rgb[1],10).toString(16)).slice(-2) 
+  + ("0" + parseInt(rgb[2],10).toString(16)).slice(-2) + ("0" + parseInt(rgb[3],10).toString(16)).slice(-2) : color;
+}
